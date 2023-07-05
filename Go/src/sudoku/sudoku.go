@@ -1,6 +1,6 @@
 package sudoku
 
-import "ftm"
+import "fmt"
 
 // Rows are arrays of integers
 type Row []int
@@ -36,7 +36,7 @@ func (sudoku Sudoku) IsSolved() bool {
 	columns := sudoku.getColumns()
 	boxes := sudoku.getBoxes()
 
-	for rowPos, Row := range sudoku {
+	for _, Row := range sudoku {
 
 		if !(Row.complete() && Row.repetitions()) {
 			return false
@@ -63,7 +63,7 @@ func (sudoku Sudoku) IsSolved() bool {
 func (sudoku Sudoku) Update(cell Cell, n int) {
 
 	if (n != -1)	{
-		sudoku[cell.rowPos][cell.colPos] = n
+		sudoku[cell.Row][cell.Col] = n
 	}
 
 }
@@ -74,13 +74,13 @@ func (sudoku Sudoku) Update(cell Cell, n int) {
 //  - fill those cells
 func (sudoku Sudoku) MapAndReduce() {
 
-	cells []Cell
+	cells := make([]Cell, 0)
 
 	for rowPos, row := range sudoku {
 
-		for colPos, num := range row {
+		for colPos, _ := range row {
 			
-			if (s[rowPos][colPos] == 0)	{
+			if (sudoku[rowPos][colPos] == 0)	{
 
 				cell := sudoku.setCandidateNumbers(rowPos, colPos)
 				cells = append(cells, cell)
@@ -91,27 +91,25 @@ func (sudoku Sudoku) MapAndReduce() {
 
 	}
 
-	singleCandidateCells := cells.getSingleCandidateNumberCell()
+	singleCandidateCells := getSingleCandidateNumberCell(cells)
 
-	for cell := range singleCandidateCells {
+	for _, cell := range singleCandidateCells {
 
 		n := cell.getSingleNumber()
 		sudoku.Update(cell, n)
 
 	} 
-
-	
 } 
 
-func (cells []Cell) getSingleCandidateNumberCell() []Cell {
+func getSingleCandidateNumberCell(cells []Cell) []Cell {
 
-	singleCells []Cell
+	singleCells := make([]Cell,0)
 
-	for cell := range singleCells {
+	for _, cell := range cells {
 
 		m := make(map[bool]int)
 		
-		for candidate, value := range cell.CandidateNumbers {
+		for _, value := range cell.CandidateNumbers {
 			m[value] = m[value] + 1
 		}
 		
@@ -122,14 +120,14 @@ func (cells []Cell) getSingleCandidateNumberCell() []Cell {
 	}
 	return singleCells
 		
-	}
 }
+
 
 // Taking a candidate number set of a single cell and starting from a default map, 
 // it sets to false those numbers which are not proper candidates
 func (sudoku Sudoku) setCandidateNumbers(rowPos int, colPos int) Cell {
 
-	boxPos = getBoxPosition(colPos, rowPos)
+	boxPos := getBoxPosition(colPos, rowPos)
 	candidateMap := defaultMap()
 	columns := sudoku.getColumns()
 	boxes := sudoku.getBoxes()
@@ -171,7 +169,7 @@ func defaultMap() CandidateNumbers {
 	return m
 }
 
-func (cell Cell) getSingleNumber()	{
+func (cell Cell) getSingleNumber() int {
 
 	n := -1
 
@@ -263,11 +261,11 @@ func (row Row) repetitions() bool {
 }
 
 // Get a map of the columns
-func (sudoku Sudoku) getColumns() [int]Row {
+func (sudoku Sudoku) getColumns() map[int]Row {
 
 	columns := make(map[int]Row)
 	
-	for rowPos, Row := range sudoku {
+	for _, Row := range sudoku {
 
 		for colPos, num := range Row {
 			
@@ -280,14 +278,14 @@ func (sudoku Sudoku) getColumns() [int]Row {
 }
 
 // Get a map of the boxes
-func (sudoku Sudoku) getBoxes() [int]Row {
+func (sudoku Sudoku) getBoxes() map[int]Row {
 	boxes := make(map[int]Row)
 
 	for rowPos, Row := range sudoku {
 
 		for colPos, num := range Row {
 			
-			boxPos = getBoxPosition(colPos, rowPos)
+			boxPos := getBoxPosition(colPos, rowPos)
 			boxes[boxPos] = append(boxes[boxPos], num)
 		}
 	}
