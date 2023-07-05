@@ -59,35 +59,78 @@ func (sudoku Sudoku) IsSolved() bool {
 	return true
 }
 
+// Update a position in the sudoku board with a value
+func (sudoku Sudoku) Update(cell Cell, n int) {
+
+	if (n != -1)	{
+		sudoku[cell.rowPos][cell.colPos] = n
+	}
+
+}
+
+// This does the following:
+//  - set the candidates number for every cell
+//	- get a list of cells who have just one candidate number
+//  - fill those cells
 func (sudoku Sudoku) MapAndReduce() {
-	
+
+	cells []Cell
+
+	for rowPos, row := range sudoku {
+
+		for colPos, num := range row {
+			
+			if (s[rowPos][colPos] == 0)	{
+
+				cell := sudoku.setCandidateNumbers(rowPos, colPos)
+				cells = append(cells, cell)
+
+			}
+
+		}
+
+	}
+
+	singleCandidateCells := cells.getSingleCandidateNumberCell()
+
+	for cell := range singleCandidateCells {
+
+		n := cell.getSingleNumber()
+		sudoku.Update(cell, n)
+
+	} 
+
 	
 } 
 
-func (sudoku Sudoku) getSingleCandidateNumberCell() []Cell {
+func (cells []Cell) getSingleCandidateNumberCell() []Cell {
 
-	cells []Cell := []
+	singleCells []Cell
 
-	for rowPos, Row := range sudoku {
+	for cell := range singleCells {
+
+		m := make(map[bool]int)
 		
-		for colPos, num := range Row {
-
-			if num == 0 {
-
-				candidates :=  
-				for _, b := 
-
-			}
+		for candidate, value := range cell.CandidateNumbers {
+			m[value] = m[value] + 1
 		}
+		
+		if m[true] == 1 {
+			singleCells = append(singleCells, cell)
+		}
+
+	}
+	return singleCells
+		
 	}
 }
 
 // Taking a candidate number set of a single cell and starting from a default map, 
 // it sets to false those numbers which are not proper candidates
-func (sudoku Sudoku) setCandidateNumbers(rowPos int, colPos int) {
+func (sudoku Sudoku) setCandidateNumbers(rowPos int, colPos int) Cell {
 
 	boxPos = getBoxPosition(colPos, rowPos)
-	baseCandidateMap := defaultMap()
+	candidateMap := defaultMap()
 	columns := sudoku.getColumns()
 	boxes := sudoku.getBoxes()
 
@@ -97,21 +140,23 @@ func (sudoku Sudoku) setCandidateNumbers(rowPos int, colPos int) {
 
 	for _,n := range row {
 		if n > 0 {
-			baseCandidateMap[n] = false
+			candidateMap[n] = false
 		}
 	}
 
 	for _,n := range column {
 		if n > 0 {
-			baseCandidateMap[n] = false
+			candidateMap[n] = false
 		}
 	}
 
 	for _,n := range box {
 		if n > 0 {
-			baseCandidateMap[n] = false
+			candidateMap[n] = false
 		}
 	}
+
+	return Cell{Row: rowPos, Col: colPos, CandidateNumbers: candidateMap}
 
 }
 
@@ -124,6 +169,22 @@ func defaultMap() CandidateNumbers {
 		m[i] = true
 	} 
 	return m
+}
+
+func (cell Cell) getSingleNumber()	{
+
+	n := -1
+
+	for key, val := range cell.CandidateNumbers {
+
+		if val {
+			n = key
+		}
+
+	}
+
+	return n
+
 }
 
 
@@ -191,7 +252,7 @@ func (row Row) complete() bool {
 
 // Check whether a row, column or box has repetitions of numbers or not
 func (row Row) repetitions() bool {
-	m = make(map[int]int)
+	m := make(map[int]int)
 	for _,num := range row {
 		m[num] = m[num] + 1
 		if m[num] > 1 {
