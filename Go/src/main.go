@@ -1,10 +1,14 @@
 package main
 
 import (
-	"sudoku"
-	"fmt"
+	"github.com/AlessandroPirolo/Sudoku-solver/sudoku"
 )
 
 func main() {
-	var mySudoku = Load("../example.txt")
+
+	var mySudoku sudoku.Sudoku
+
+	mySudoku = sudoku.Load("../example.txt")
+
+	mySudoku.Print()
 }

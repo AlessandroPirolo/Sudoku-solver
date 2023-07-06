@@ -5,7 +5,7 @@ import "fmt"
 // Rows are arrays of integers
 type Row []int
 
-// A sudoku board is an array of Row 
+// A sudoku board is an array of Row
 type Sudoku []Row
 
 // Every position in the board has a map associated, saying if a number can be used to fill that position or not
@@ -13,8 +13,8 @@ type CandidateNumbers map[int]bool
 
 // Cell represents a position in the Sudoku board
 type Cell struct {
-	Row int
-	Col int
+	Row              int
+	Col              int
 	CandidateNumbers CandidateNumbers
 }
 
@@ -31,7 +31,7 @@ func (s Sudoku) Print() {
  *		- create the columns, i.e. a row containing elements from the same column position but in different rows;
  *		- create the boxes, i.e. value in different rows and column. Sudoku has 9 boxes, each 3x3;
  *		- for both boxes and columns, repeat the operations done for the row (complete and repetitions)
-*/
+ */
 func (sudoku Sudoku) IsSolved() bool {
 	columns := sudoku.getColumns()
 	boxes := sudoku.getBoxes()
@@ -59,28 +59,53 @@ func (sudoku Sudoku) IsSolved() bool {
 	return true
 }
 
+func (sudoku Sudoku) IsValid() bool {
+	columns := sudoku.getColumns()
+	boxes := sudoku.getBoxes()
+
+	for _, Row := range sudoku {
+		if !(Row.repetitions()) {
+			return false
+		}
+	}
+
+	for _, Row := range columns {
+		if !(Row.repetitions()) {
+			return false
+		}
+	}
+
+	for _, Row := range boxes {
+		if !(Row.repetitions()) {
+			return false
+		}
+	}
+
+	return true
+}
+
 // Update a position in the sudoku board with a value
 func (sudoku Sudoku) Update(cell Cell, n int) {
 
-	if (n != -1)	{
+	if n != -1 {
 		sudoku[cell.Row][cell.Col] = n
 	}
 
 }
 
 // This does the following:
-//  - set the candidates number for every cell
-//	- get a list of cells who have just one candidate number
-//  - fill those cells
+//   - set the candidates number for every cell
+//   - get a list of cells who have just one candidate number
+//   - fill those cells
 func (sudoku Sudoku) MapAndReduce() {
 
 	cells := make([]Cell, 0)
 
 	for rowPos, row := range sudoku {
 
-		for colPos, _ := range row {
-			
-			if (sudoku[rowPos][colPos] == 0)	{
+		for colPos := range row {
+
+			if sudoku[rowPos][colPos] == 0 {
 
 				cell := sudoku.setCandidateNumbers(rowPos, colPos)
 				cells = append(cells, cell)
@@ -98,32 +123,31 @@ func (sudoku Sudoku) MapAndReduce() {
 		n := cell.getSingleNumber()
 		sudoku.Update(cell, n)
 
-	} 
-} 
+	}
+}
 
 func getSingleCandidateNumberCell(cells []Cell) []Cell {
 
-	singleCells := make([]Cell,0)
+	singleCells := make([]Cell, 0)
 
 	for _, cell := range cells {
 
 		m := make(map[bool]int)
-		
+
 		for _, value := range cell.CandidateNumbers {
 			m[value] = m[value] + 1
 		}
-		
+
 		if m[true] == 1 {
 			singleCells = append(singleCells, cell)
 		}
 
 	}
 	return singleCells
-		
+
 }
 
-
-// Taking a candidate number set of a single cell and starting from a default map, 
+// Taking a candidate number set of a single cell and starting from a default map,
 // it sets to false those numbers which are not proper candidates
 func (sudoku Sudoku) setCandidateNumbers(rowPos int, colPos int) Cell {
 
@@ -136,19 +160,19 @@ func (sudoku Sudoku) setCandidateNumbers(rowPos int, colPos int) Cell {
 	column := columns[colPos]
 	box := boxes[boxPos]
 
-	for _,n := range row {
+	for _, n := range row {
 		if n > 0 {
 			candidateMap[n] = false
 		}
 	}
 
-	for _,n := range column {
+	for _, n := range column {
 		if n > 0 {
 			candidateMap[n] = false
 		}
 	}
 
-	for _,n := range box {
+	for _, n := range box {
 		if n > 0 {
 			candidateMap[n] = false
 		}
@@ -160,12 +184,12 @@ func (sudoku Sudoku) setCandidateNumbers(rowPos int, colPos int) Cell {
 
 // Create a default map of candidate numbers, i.e. a map where all numbers are possible candidates
 func defaultMap() CandidateNumbers {
-	
+
 	m := make(CandidateNumbers)
 
 	for i := 1; i <= 9; i++ {
 		m[i] = true
-	} 
+	}
 	return m
 }
 
@@ -185,54 +209,52 @@ func (cell Cell) getSingleNumber() int {
 
 }
 
-
-
 // Given the coordinates of a cell in the board, it return the box in which it's contained
 func getBoxPosition(col int, row int) int {
 
 	pos := 0
 
 	switch {
-	case row < 3: 
+	case row < 3:
 		switch {
-			case col < 3: 
-					pos = 0
-					break 
-			case col < 6:
-					pos = 1
-					break
-			case col < 9:
-					pos = 2
-					break
+		case col < 3:
+			pos = 0
+			break
+		case col < 6:
+			pos = 1
+			break
+		case col < 9:
+			pos = 2
+			break
 		}
 		break
-	case row < 6: 
+	case row < 6:
 		switch {
-			case col < 3: 
-					pos = 3
-					break 
-			case col < 6:
-					pos = 4
-					break
-			case col < 9:
-					pos = 5
-					break
+		case col < 3:
+			pos = 3
+			break
+		case col < 6:
+			pos = 4
+			break
+		case col < 9:
+			pos = 5
+			break
 		}
 		break
-	case row < 9: 
+	case row < 9:
 		switch {
-			case col < 3: 
-					pos = 6
-					break 
-			case col < 6:
-					pos = 7
-					break
-			case col < 9:
-					pos = 8
-					break
+		case col < 3:
+			pos = 6
+			break
+		case col < 6:
+			pos = 7
+			break
+		case col < 9:
+			pos = 8
+			break
 		}
 		break
-		
+
 	}
 
 	return pos
@@ -240,23 +262,34 @@ func getBoxPosition(col int, row int) int {
 
 // Check whether a row, column or box has cell that contains zero or not
 func (row Row) complete() bool {
+
 	for _, n := range row {
+
 		if n == 0 {
 			return false
 		}
+
 	}
 	return true
 }
 
 // Check whether a row, column or box has repetitions of numbers or not
 func (row Row) repetitions() bool {
+
 	m := make(map[int]int)
-	for _,num := range row {
-		m[num] = m[num] + 1
+
+	for _, num := range row {
+
+		if num > 0 {
+			m[num] = m[num] + 1
+		}
+
 		if m[num] > 1 {
 			return false
 		}
+
 	}
+
 	return true
 }
 
@@ -264,11 +297,11 @@ func (row Row) repetitions() bool {
 func (sudoku Sudoku) getColumns() map[int]Row {
 
 	columns := make(map[int]Row)
-	
+
 	for _, Row := range sudoku {
 
 		for colPos, num := range Row {
-			
+
 			columns[colPos] = append(columns[colPos], num)
 
 		}
@@ -284,7 +317,7 @@ func (sudoku Sudoku) getBoxes() map[int]Row {
 	for rowPos, Row := range sudoku {
 
 		for colPos, num := range Row {
-			
+
 			boxPos := getBoxPosition(colPos, rowPos)
 			boxes[boxPos] = append(boxes[boxPos], num)
 		}
@@ -292,4 +325,3 @@ func (sudoku Sudoku) getBoxes() map[int]Row {
 
 	return boxes
 }
-
