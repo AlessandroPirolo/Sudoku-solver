@@ -18,6 +18,11 @@ type Cell struct {
 	CandidateNumbers CandidateNumbers
 }
 
+type Channel struct {
+	Intermediate Sudoku
+	Solved       bool
+}
+
 // Print function
 func (s Sudoku) Print() {
 	for i, col := range s {
@@ -84,6 +89,7 @@ func (sudoku Sudoku) IsValid() bool {
 	return true
 }
 
+// Makes a copy of a sudoku board
 func (sudoku Sudoku) Copy() Sudoku {
 
 	newSudoku := make(Sudoku, 0)
@@ -91,10 +97,7 @@ func (sudoku Sudoku) Copy() Sudoku {
 	for _, row := range sudoku {
 
 		newRow := make(Row, 0)
-
-		for _, num := range row {
-			newRow = append(newRow, num)
-		}
+		newRow = append(newRow, row...)
 
 		newSudoku = append(newSudoku, newRow)
 	}
@@ -105,10 +108,16 @@ func (sudoku Sudoku) Copy() Sudoku {
 // Update a position in the sudoku board with a value
 func (sudoku Sudoku) Update(cell Cell, n int) {
 
-	if n != -1 {
-		sudoku[cell.Row][cell.Col] = n
-	}
+	done := make(chan struct{})
 
+	go func(sudoku Sudoku) {
+		if n != -1 {
+			sudoku[cell.Row][cell.Col] = n
+		}
+		done <- struct{}{}
+	}(sudoku)
+
+	<-done
 }
 
 // This does the following:
@@ -144,6 +153,7 @@ func (sudoku Sudoku) MapAndReduce() {
 	}
 }
 
+// Returns those cells which have only one possible candidate number
 func getSingleCandidateNumberCell(cells []Cell) []Cell {
 
 	singleCells := make([]Cell, 0)
@@ -211,20 +221,30 @@ func defaultMap() CandidateNumbers {
 	return m
 }
 
+// Returns the candidate number of a cell iff that cell has only one candidate,
+// otherwise it returns -1
 func (cell Cell) getSingleNumber() int {
 
 	n := -1
 
-	for key, val := range cell.CandidateNumbers {
+	m := make(map[bool]int)
 
-		if val {
-			n = key
+	for _, value := range cell.CandidateNumbers {
+		m[value] = m[value] + 1
+	}
+
+	if m[true] == 1 {
+
+		for key, val := range cell.CandidateNumbers {
+
+			if val {
+				n = key
+			}
+
 		}
-
 	}
 
 	return n
-
 }
 
 // Given the coordinates of a cell in the board, it return the box in which it's contained
@@ -237,41 +257,40 @@ func getBoxPosition(col int, row int) int {
 		switch {
 		case col < 3:
 			pos = 0
-			break
+
 		case col < 6:
 			pos = 1
-			break
+
 		case col < 9:
 			pos = 2
-			break
+
 		}
-		break
+
 	case row < 6:
 		switch {
 		case col < 3:
 			pos = 3
-			break
+
 		case col < 6:
 			pos = 4
-			break
+
 		case col < 9:
 			pos = 5
-			break
+
 		}
-		break
+
 	case row < 9:
 		switch {
 		case col < 3:
 			pos = 6
-			break
+
 		case col < 6:
 			pos = 7
-			break
+
 		case col < 9:
 			pos = 8
-			break
+
 		}
-		break
 
 	}
 
