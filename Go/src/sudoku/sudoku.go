@@ -84,6 +84,24 @@ func (sudoku Sudoku) IsValid() bool {
 	return true
 }
 
+func (sudoku Sudoku) Copy() Sudoku {
+
+	newSudoku := make(Sudoku, 0)
+
+	for _, row := range sudoku {
+
+		newRow := make(Row, 0)
+
+		for _, num := range row {
+			newRow = append(newRow, num)
+		}
+
+		newSudoku = append(newSudoku, newRow)
+	}
+
+	return newSudoku
+}
+
 // Update a position in the sudoku board with a value
 func (sudoku Sudoku) Update(cell Cell, n int) {
 
