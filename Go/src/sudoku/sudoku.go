@@ -19,8 +19,8 @@ type Cell struct {
 }
 
 type Channel struct {
-	Intermediate Sudoku
-	Solved       bool
+	Solution Sudoku
+	Solved   bool
 }
 
 // Print function
@@ -108,16 +108,16 @@ func (sudoku Sudoku) Copy() Sudoku {
 // Update a position in the sudoku board with a value
 func (sudoku Sudoku) Update(cell Cell, n int) {
 
-	done := make(chan struct{})
+	//done := make(chan struct{})
 
-	go func(sudoku Sudoku) {
-		if n != -1 {
-			sudoku[cell.Row][cell.Col] = n
-		}
-		done <- struct{}{}
-	}(sudoku)
+	/*go func(sudoku Sudoku) {*/
+	if n != -1 {
+		sudoku[cell.Row][cell.Col] = n
+	}
+	//done <- struct{}{}
+	/*}(sudoku)*/
 
-	<-done
+	//<-done
 }
 
 // This does the following:
@@ -134,7 +134,7 @@ func (sudoku Sudoku) MapAndReduce() {
 
 			if sudoku[rowPos][colPos] == 0 {
 
-				cell := sudoku.setCandidateNumbers(rowPos, colPos)
+				cell := sudoku.candidateNumbers(rowPos, colPos)
 				cells = append(cells, cell)
 
 			}
@@ -177,7 +177,7 @@ func getSingleCandidateNumberCell(cells []Cell) []Cell {
 
 // Taking a candidate number set of a single cell and starting from a default map,
 // it sets to false those numbers which are not proper candidates
-func (sudoku Sudoku) setCandidateNumbers(rowPos int, colPos int) Cell {
+func (sudoku Sudoku) candidateNumbers(rowPos int, colPos int) Cell {
 
 	boxPos := getBoxPosition(colPos, rowPos)
 	candidateMap := defaultMap()
@@ -208,6 +208,25 @@ func (sudoku Sudoku) setCandidateNumbers(rowPos int, colPos int) Cell {
 
 	return Cell{Row: rowPos, Col: colPos, CandidateNumbers: candidateMap}
 
+}
+
+// Returns a list of empty cell with their candidate number
+func (sudoku Sudoku) EmptyCells() []Cell {
+
+	cellList := make([]Cell, 0)
+
+	for rowPos, row := range sudoku {
+
+		for colPos, num := range row {
+
+			if num == 0 {
+				cell := sudoku.candidateNumbers(rowPos, colPos)
+				cellList = append(cellList, cell)
+			}
+
+		}
+	}
+	return cellList
 }
 
 // Create a default map of candidate numbers, i.e. a map where all numbers are possible candidates
