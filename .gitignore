@@ -1,0 +1,26 @@
+# Go
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# Erlang
+*.beam
+*.boot
+*.rel
+*.script
+*.dump
+*.smp
+*.dump_sizes
+
+ebin/
+deps/
+rel/
+
+erl_crash.dump
+
+#IntelliJ IDEA
+.idea/
