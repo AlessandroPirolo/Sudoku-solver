@@ -1,4 +1,4 @@
--module(sudokufile).
+-module(sudoku_file).
 
 % API
 -export([load/1]).

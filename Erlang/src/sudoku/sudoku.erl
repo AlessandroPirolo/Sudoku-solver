@@ -1,7 +1,7 @@
 -module(sudoku).
 
 %% API
--export([is_solved/1, init/1, get_candidate/1, get_cell/3, set_cell/2, map_and_reduce/1, print_sudoku/1]).
+-export([is_solved/1, is_valid/1, init/1, get_candidate/3, get_cell/3, set_cell/4, map_and_reduce/1, print_sudoku/1]).
 
 % Type specification for the list of candidate numbers
 -type candidate() :: map(integer(), boolean()).
@@ -26,12 +26,12 @@ print_cell(Cell) ->
     Value -> io:format(" ~w", [Value])
   end.
 
-
 % Get the value of a cell
 get_cell(Sudoku, Row, Col) ->
   V = lists:nth(Row, Sudoku),
   Cell = lists:nth(Col, V),
-  get_cell(Cell).
+  ReturnValue = get_cell(Cell),
+  {ReturnValue, Row, Col}.
 
 get_cell(Cell) ->
   case Cell of
@@ -44,18 +44,30 @@ get_cell(Cell) ->
   end.
 
 % Set the value of a cell
-set_cell(Cell, Value) ->
+set_cell(Sudoku, Row, Col, Value) ->
+  V = lists:nth(Row, Sudoku),
+  Cell = lists:nth(Col, V),
   case Cell of
     Num when is_integer(Num) ->  % The cell already has the desired value, return as is
-      Cell;
+      Sudoku;
     {'_', _} ->  % Cell with candidate map
-      Value;  % Assuming Value is a valid integer
+      NewRow = set_nth(Col, Row, Value),
+      NewSudoku = set_nth(Row, Sudoku, NewRow),
+      NewSudoku;  % Assuming Value is a valid integer
     _ ->  % Cell with a filled value
-      {'_', #{}}
+      Sudoku
   end.
 
+set_nth(1, [_|Rest], New) ->
+  [New|Rest];
+set_nth(I, [E|Rest], New) ->
+  [E|set_nth(I-1, Rest, New)].
+
+
 % Get the list of candidate numbers
-get_candidate(Cell) ->
+get_candidate(Sudoku, RowNum, ColNum) ->
+  Row = lists:nth(RowNum, Sudoku),
+  Cell = lists:nth(ColNum, Row),
   case Cell of
     _ ->
       error({invalid_cell, Cell});
@@ -70,7 +82,6 @@ init(Sudoku) ->
 % Initialization of one row
 init_row(Sudoku, Row) ->
   lists:map(fun(Ind, Item) -> transform(Sudoku, Row, Ind, Item) end, Row).
-
 
 predicate(Cell) ->
   case Cell of
@@ -97,6 +108,9 @@ set_candidate(Sudoku, Row, Col) ->
     maps:put(I, not(Value), CMap)
                 end, lists:seq(1, 9)).
 
+% Check if the sudoku board is valid, i.e. if there are repetitions of numbers
+is_valid(Sudoku) -> repetitions(Sudoku).
+
 % Checking if the sudoku board is solved
 is_solved(Sudoku) -> complete(Sudoku) and repetitions(Sudoku).
 
@@ -107,12 +121,12 @@ complete(Sudoku) -> complete(Sudoku, 1).
 complete(Board, Row) when Row =< length(Board) ->
   case check_row(Board, Row, 1) of
     true ->
-      complete(Board, Row + 1);
+      false;
     false ->
-      true
+      complete(Board, Row + 1)
   end;
 complete(_, _) ->
-  false.
+  true.
 
 % Check if there are zero in a row
 check_row([Row|Rest], RowNum, Col) when Col =< length(Row) ->
@@ -249,30 +263,27 @@ pos(Row, Col) ->
       end
   end.
 
-%
+% Find every empty cell which has only one possible candidate and
+% fill it with that number
 map_and_reduce(Sudoku) ->
-  Singles = get_single_cell(Sudoku),
-  lists:foreach(fun(_Ind, Cell) ->
-    Candidates = get_candidate(Cell),
-    Value = maps:get(true, Candidates),
-    set_cell(Cell, Value)
-    end,Singles).
+  lists:map(fun(Row) ->
+    map_and_reduce_row(Row)
+    end,Sudoku).
 
-
-% Return every cell that has one candidate number in the sudoku board
-get_single_cell(Sudoku) ->
-  lists:foreach( fun(_Ind, Row) -> lists:filter(get_single_cell_row(Row), Row) end, Sudoku).
-
-% Return every cell that has one candidate number in the row
-get_single_cell_row(Row) ->
-  lists:filter( fun(_Ind, Item) ->
-    Value = get_candidate(Item),
-    case Value of
-      {error, {invalid_cell, _}} ->
-        false;
-      _ -> single(Value)
+map_and_reduce_row(Row) ->
+  lists:map(fun(Elem) ->
+    case Elem of
+      Num when is_integer(Num) ->
+        Num;
+      {'_', Candidates} ->
+        case single(Candidates) of
+          true ->
+            maps:get(true, Candidates);
+          false ->
+            {'_', Candidates}
+        end
     end
-    end,Row).
+  end, Row).
 
 % Return true if the cell has just one candidate number
 single(Candidates) ->
