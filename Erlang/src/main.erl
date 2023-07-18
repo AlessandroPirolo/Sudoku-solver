@@ -2,7 +2,10 @@
 
 -export([start/1]).
 
-start(Problem) ->
+start(FilePath) ->
+
+  Problem = sudoku_file:load(FilePath),
+
   % Check if the problem is already solved
   case sudoku:is_solved(Problem) of
     true ->
@@ -22,7 +25,7 @@ start(Problem) ->
       TrueCandidates = sudoku_solver:list_candidates(Candidates),
 
       PidS = lists:map(fun(Num) ->
-        spawn_link(sudoku_solver, solve/4, [SudokuReduced, {Row, Col}, Num, self()])
+        spawn_link(sudoku_solver, solve, [SudokuReduced, {Row, Col}, Num, self()])
         end,TrueCandidates),
 
       receive

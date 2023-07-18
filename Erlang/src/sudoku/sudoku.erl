@@ -3,15 +3,6 @@
 %% API
 -export([is_solved/1, is_valid/1, init/1, get_candidate/3, get_cell/3, set_cell/4, map_and_reduce/1, print_sudoku/1]).
 
-% Type specification for the list of candidate numbers
--type candidate() :: map(integer(), boolean()).
-
-% Type specification for a Sudoku cell
--type cell() :: integer() | {'_', candidate()} | '_'.
-
-% Type specification for a Sudoku board
--type sudoku() :: [[cell()]].
-
 % Print a sudoku board
 print_sudoku(Sudoku) ->
   lists:foreach(fun(Row) -> print_row(Row) end, Sudoku).
@@ -22,8 +13,10 @@ print_row(Row) ->
 
 print_cell(Cell) ->
   case Cell of
-    _ -> io:format(" _");
-    Value -> io:format(" ~w", [Value])
+    Value when is_integer(Value) ->
+      io:format(" ~w", [Value]);
+    _ ->
+      io:format(" _")
   end.
 
 % Get the value of a cell
@@ -69,10 +62,10 @@ get_candidate(Sudoku, RowNum, ColNum) ->
   Row = lists:nth(RowNum, Sudoku),
   Cell = lists:nth(ColNum, Row),
   case Cell of
-    _ ->
-      error({invalid_cell, Cell});
     {'_', Candidates} ->
-      Candidates
+      Candidates;
+    _ ->
+      error({invalid_cell, Cell})
   end.
 
 % Initialization: in every empty list sets the candidate list
@@ -96,7 +89,7 @@ predicate(Cell) ->
 % Transform each cell of the form '_' in {'_', candidates}
 transform(Sudoku, Row, Col, Cell) ->
   case predicate(Cell) of
-    true  -> {_, set_candidate(Sudoku, Row, Col)};
+    true  -> {'_', set_candidate(Sudoku, Row, Col)};
     false -> Cell
   end.
 
@@ -238,27 +231,27 @@ pos(Row, Col) ->
       case Col of
         N when N =< 3 ->
           1;
-        N when N > 3 and N =< 6 ->
+        N when N > 3, N =< 6 ->
           2;
-        N when N > 6 and N =< 9 ->
+        N when N > 6, N =< 9 ->
           3
       end;
-    Num when Num > 3 and Num =< 6 ->
+    Num when Num > 3, Num =< 6 ->
       case Col of
         N when N =< 3 ->
           4;
-        N when N > 3 and N =< 6 ->
+        N when N > 3, N =< 6 ->
           5;
-        N when N > 6 and N =< 9 ->
+        N when N > 6, N =< 9 ->
           6
       end;
-    Num when Num > 6 and Num =< 9 ->
+    Num when Num > 6, Num =< 9 ->
       case Col of
         N when N =< 3 ->
           7;
-        N when N > 3 and N =< 6 ->
+        N when N > 3, N =< 6 ->
           8;
-        N when N > 6 and N =< 9 ->
+        N when N > 6, N =< 9 ->
           9
       end
   end.

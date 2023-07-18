@@ -10,16 +10,16 @@ load(PathName) ->
   file:close(File),
   Sudoku.
 
-load_lines(File, Board, Ind) ->
+load_lines(File, Board, Ind) when Ind =< length(Board) ->
   case file:read_line(File) of
     {ok, Line} ->
       NewLine = split(Line),
       Row = transform(NewLine),
       S = array:set(Ind, Row, Board),
       SudokuBoard = load_lines(File, S, Ind + 1),
-      SudokuBoard;
+      array:to_list(SudokuBoard);
     eof ->
-      Board
+      array:to_list(Board)
   end.
 
 transform(Line) ->
@@ -33,12 +33,5 @@ transform(Line) ->
     end,Line).
 
 split(Line) ->
-  List = binary:bin_to_list(Line),
-  lists:filter( fun(Elem) ->
-    case Elem of
-      Num when is_integer(Num) ->
-        true;
-      _ ->
-        false
-    end
-    end,List).
+  List = string:split(Line, ",", all),
+  unicode:characters_to_list(List).
