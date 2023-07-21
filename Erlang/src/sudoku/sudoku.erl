@@ -8,8 +8,19 @@ print_sudoku(Sudoku) ->
   lists:foreach(fun(Row) -> print_row(Row) end, Sudoku).
 
 print_row(Row) ->
-  lists:foreach(fun(Cell) -> print_cell(Cell) end, Row),
+  lists:foreach(fun(Cell) -> print_complete(Cell) end, Row),
   io:format("~n").
+
+print_complete(Cell) ->
+  case Cell of
+    Value when is_integer(Value) ->
+      io:format(" ~w", [Value]);
+    {'_', Candidates} ->
+      io:format(" { _, ~p }", [Candidates]);
+    _ ->
+      io:format(" _")
+
+  end.
 
 print_cell(Cell) ->
   case Cell of
@@ -56,7 +67,6 @@ set_nth(1, [_|Rest], New) ->
 set_nth(I, [E|Rest], New) ->
   [E|set_nth(I-1, Rest, New)].
 
-
 % Get the list of candidate numbers
 get_candidate(Sudoku, RowNum, ColNum) ->
   Row = lists:nth(RowNum, Sudoku),
@@ -70,11 +80,15 @@ get_candidate(Sudoku, RowNum, ColNum) ->
 
 % Initialization: in every empty list sets the candidate list
 init(Sudoku) ->
-  [[init_row(Sudoku, Row) || Row <- Sudoku] || _ <- lists:seq(1, length(Sudoku))].
+  %[[init_row(Sudoku, Row) || Row <- Sudoku] || _ <- lists:seq(1, length(Sudoku))].
+  lists:map(fun({RowNum, Row}) ->
+    init_row(Sudoku, Row, RowNum)
+            end, lists:zip(lists:seq(1, length(Sudoku)), Sudoku)).
 
 % Initialization of one row
-init_row(Sudoku, Row) ->
-  lists:map(fun(Ind, Item) -> transform(Sudoku, Row, Ind, Item) end, Row).
+init_row(Sudoku, Row, RowNum) ->
+  lists:map(fun({Col, Item}) -> transform(Sudoku, RowNum, Col, Item) end, lists:zip(lists:seq(1, length(Row)), Row)).
+
 
 predicate(Cell) ->
   case Cell of
@@ -96,10 +110,12 @@ transform(Sudoku, Row, Col, Cell) ->
 % Set candidate list for a cell
 set_candidate(Sudoku, Row, Col) ->
   CMap = maps:new(),
+  Keys = lists:seq(1,9),
   lists:foreach(fun(I) ->
     Value = search_for(Sudoku, Row, Col, I),
     maps:put(I, not(Value), CMap)
-                end, lists:seq(1, 9)).
+                end, Keys),
+  CMap.
 
 % Check if the sudoku board is valid, i.e. if there are repetitions of numbers
 is_valid(Sudoku) -> repetitions(Sudoku).
@@ -208,12 +224,14 @@ check_rep_cell(Sudoku, Row, Col, Seen) ->
 
 % Return true if a value is already present in the row, column and box of a given cell
 search_for(Sudoku, Row, Col, Value) ->
-  search_row(Row, Value) and
+  search_row(Sudoku, Row, Value) and
     search_col(Sudoku, Col, Value) and
     search_box(Sudoku, Row, Col, Value).
 
 % Return true if the value is already in the row
-search_row(Row, Value) -> lists:member(Value, Row).
+search_row(Sudoku, RowNum, Value) ->
+  Row = lists:nth(RowNum, Sudoku),
+  lists:member(Value, Row).
 
 % Return true if the value is already in the column
 search_col(Sudoku, Col, Value) ->

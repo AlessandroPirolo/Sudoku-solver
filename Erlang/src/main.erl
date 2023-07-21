@@ -5,7 +5,7 @@
 start(FilePath) ->
 
   Problem = sudoku_file:load(FilePath),
-
+  sudoku:print_sudoku(Problem),
   % Check if the problem is already solved
   case sudoku:is_solved(Problem) of
     true ->
