@@ -1,26 +1,16 @@
 -module(sudoku).
 
 %% API
--export([is_solved/1, is_valid/1, init/1, get_candidate/3, get_cell/3, set_cell/4, map_and_reduce/1, print_sudoku/1]).
+-export([is_solved/1, is_valid/1, init/1, get_candidate/3, get_cell/3, set_cell/4, map_and_reduce/1, print_sudoku/1, search_for/4, to_box/1, set_candidate/3, search_first_empty/1]).
+
 
 % Print a sudoku board
 print_sudoku(Sudoku) ->
   lists:foreach(fun(Row) -> print_row(Row) end, Sudoku).
 
 print_row(Row) ->
-  lists:foreach(fun(Cell) -> print_complete(Cell) end, Row),
+  lists:foreach(fun(Cell) -> print_cell(Cell) end, Row),
   io:format("~n").
-
-print_complete(Cell) ->
-  case Cell of
-    Value when is_integer(Value) ->
-      io:format(" ~w", [Value]);
-    {'_', Candidates} ->
-      io:format(" { _, ~p }", [Candidates]);
-    _ ->
-      io:format(" _")
-
-  end.
 
 print_cell(Cell) ->
   case Cell of
@@ -48,17 +38,25 @@ get_cell(Cell) ->
   end.
 
 % Set the value of a cell
-set_cell(Sudoku, Row, Col, Value) ->
-  V = lists:nth(Row, Sudoku),
-  Cell = lists:nth(Col, V),
+set_cell(Sudoku, RowNum, ColNum, Value) ->
+  Row = lists:nth(RowNum, Sudoku),
+  Cell = lists:nth(ColNum, Row),
+
   case Cell of
-    Num when is_integer(Num) ->  % The cell already has the desired value, return as is
+    Num when is_integer(Num) ->  % The cell already has the desired value
       Sudoku;
+
     {'_', _} ->  % Cell with candidate map
-      NewRow = set_nth(Col, Row, Value),
-      NewSudoku = set_nth(Row, Sudoku, NewRow),
+      NewRow = set_nth(ColNum, Row, Value),
+      NewSudoku = set_nth(RowNum, Sudoku, NewRow),
       NewSudoku;  % Assuming Value is a valid integer
-    _ ->  % Cell with a filled value
+
+    '_' ->  % Empty cell
+      NewRow = set_nth(ColNum, Row, Value),
+      NewSudoku = set_nth(RowNum, Sudoku, NewRow),
+      NewSudoku;
+
+    _ ->  % By default
       Sudoku
   end.
 
@@ -97,7 +95,7 @@ predicate(Cell) ->
     '_' ->
       true;
     {'_', _} ->
-      false
+      true
   end.
 
 % Transform each cell of the form '_' in {'_', candidates}
@@ -109,19 +107,41 @@ transform(Sudoku, Row, Col, Cell) ->
 
 % Set candidate list for a cell
 set_candidate(Sudoku, Row, Col) ->
-  CMap = maps:new(),
   Keys = lists:seq(1,9),
-  lists:foreach(fun(I) ->
-    Value = search_for(Sudoku, Row, Col, I),
-    maps:put(I, not(Value), CMap)
-                end, Keys),
-  CMap.
+  Values = lists:map( fun(V) ->
+    not(search_for(Sudoku, Row, Col, V))
+    end, Keys),
+  CMap = maps:from_list(lists:zip(Keys, Values)),
+  maps:filter(fun(_, V) ->
+    V =:= true
+    end,CMap).
 
-% Check if the sudoku board is valid, i.e. if there are repetitions of numbers
-is_valid(Sudoku) -> repetitions(Sudoku).
+% Return true if a value is already present in the row, column and box of a given cell
+search_for(Sudoku, Row, Col, Value) ->
+  search_row(Sudoku, Row, Value) or
+    search_col(Sudoku, Col, Value) or
+    search_box(Sudoku, Row, Col, Value).
+
+% Return true if the value is already in the row
+search_row(Sudoku, RowNum, Value) ->
+  Row = lists:nth(RowNum, Sudoku),
+  lists:member(Value, Row).
+
+% Return true if the value is already in the column
+search_col(Sudoku, Col, Value) ->
+  Row = lists:nth(Col, to_col(Sudoku)),
+  lists:member(Value, Row).
+
+% Return true if the value is already in the box
+search_box(Sudoku, Row, Col, Value) ->
+  Box = lists:nth(pos(Row,Col), to_box(Sudoku)),
+  lists:member(Value, Box).
 
 % Checking if the sudoku board is solved
-is_solved(Sudoku) -> complete(Sudoku) and repetitions(Sudoku).
+is_solved(Sudoku) -> complete(Sudoku) and is_valid(Sudoku).
+
+% Check if the sudoku board is valid, i.e. if there are repetitions of numbers
+is_valid(Sudoku) -> not(repetitions(Sudoku)).
 
 % Check if there are no zero in the sudoku board
 complete(Sudoku) -> complete(Sudoku, 1).
@@ -138,12 +158,13 @@ complete(_, _) ->
   true.
 
 % Check if there are zero in a row
-check_row([Row|Rest], RowNum, Col) when Col =< length(Row) ->
+check_row(Sudoku, RowNum, Col) when RowNum =< length(Sudoku) andalso Col =< length(Sudoku) ->
+  Row = lists:nth(RowNum, Sudoku),
   case check_cell(Row, Col) of
-    0 ->
-      true;
+    Num when is_integer(Num) ->
+      check_row(Sudoku, RowNum, Col + 1);
     _ ->
-      check_row([Row|Rest], RowNum, Col + 1)
+      true
   end;
 check_row(_, _, _) ->
   false.
@@ -152,7 +173,7 @@ check_row(_, _, _) ->
 check_cell(Row, Col) -> lists:nth(Col, Row).
 
 % Check if there are repetitions in the rows, columns or boxes
-repetitions(Sudoku) -> row_repetitions(Sudoku,1) and col_repetitions(Sudoku, 1) and box_repetitions(Sudoku, 1).
+repetitions(Sudoku) -> row_repetitions(Sudoku,1) or col_repetitions(Sudoku, 1) or box_repetitions(Sudoku, 1).
 
 % Check whether there are repetitions in the same box
 box_repetitions(Sudoku, Row) ->
@@ -164,7 +185,10 @@ to_box(Sudoku) ->
   [box(Sudoku, Row, Column) || Row <- [1, 4, 7], Column <- [1, 4, 7]].
 
 box(Sudoku, StartRow, StartColumn) ->
-  [lists:sublist(Row, StartColumn, 3) || Row <- lists:sublist(Sudoku, StartRow, 3)].
+  Rows = lists:sublist(Sudoku, StartRow, 3),
+  BoxRows = [lists:sublist(Row, StartColumn, 3) || Row <- Rows],
+  Box = lists:flatten(BoxRows),
+  Box.
 
 % Check whether there are repetitions in the same column
 col_repetitions(Sudoku, Row) ->
@@ -183,65 +207,47 @@ to_col(Sudoku) ->
 row_repetitions(Sudoku, Row) when Row =< length(Sudoku) ->
   case check_rep_row(Sudoku, Row) of
     true ->
-      row_repetitions(Sudoku, Row + 1);
+      true;
     false ->
-      true
+      row_repetitions(Sudoku, Row + 1)
   end;
 row_repetitions(_, _) ->
   false.
 
 check_rep_row(Sudoku, Row) ->
-  check_rep_row(Sudoku, Row, 1, []).
+  check_rep_row(Sudoku, Row, [0]).
 
-check_rep_row(Sudoku, Row, Col, Seen) when Col =< length(Row) ->
-  case check_rep_cell(Sudoku, Row, Col, Seen) of
+check_rep_row(Sudoku, Row, Seen) when Row =< length(Sudoku) ->
+  case check_rep_cell(Sudoku, Row, 1, Seen) of
     true ->
-      check_rep_row(Sudoku, Row, Col + 1, Seen);
+      true;
     false ->
-      true
+      check_rep_row(Sudoku, Row + 1, Seen)
   end;
-check_rep_row(_, _, _, _) ->
-  true.
+check_rep_row(_, _, _) ->
+  false.
 
 % Check whether a number was already seen in the list
-check_rep_cell(Sudoku, Row, Col, Seen) ->
+check_rep_cell(Sudoku, Row, Col, Seen) when Row =< length(Sudoku) andalso Col =< length(Sudoku) ->
   Cell = lists:nth(Col, lists:nth(Row,Sudoku)),
   case Cell of
     '_' ->
-      true; % Empty cell are skipped
+      check_rep_cell(Sudoku, Row, Col + 1, Seen); % Empty cell are skipped
     {'_', _} ->
-      true; % Empty cell are skipped
+      check_rep_cell(Sudoku, Row, Col + 1, Seen); % Empty cell are skipped
     Num when is_integer(Num) ->
       case lists:member(Num, Seen) of
         true ->
-          false; % Repetition found
+          true; % Repetition found
         false ->
-          check_rep_cell(Sudoku, Row, Col + 1, [Num|Seen]) % Repetition not found and we insert Num in the seen list
+          NewList = lists:append(Seen, [Num]), % Repetition not found and we insert Num in the seen list
+          check_rep_cell(Sudoku, Row, Col + 1, NewList)
       end;
     _ ->
       false % Something which isn't a valid cell format
-  end.
-
-% Return true if a value is already present in the row, column and box of a given cell
-search_for(Sudoku, Row, Col, Value) ->
-  search_row(Sudoku, Row, Value) and
-    search_col(Sudoku, Col, Value) and
-    search_box(Sudoku, Row, Col, Value).
-
-% Return true if the value is already in the row
-search_row(Sudoku, RowNum, Value) ->
-  Row = lists:nth(RowNum, Sudoku),
-  lists:member(Value, Row).
-
-% Return true if the value is already in the column
-search_col(Sudoku, Col, Value) ->
-  Row = lists:nth(Col, to_col(Sudoku)),
-  lists:member(Value, Row).
-
-% Return true if the value is already in the box
-search_box(Sudoku, Row, Col, Value) ->
-  Box = lists:nth(pos(Row,Col), to_box(Sudoku)),
-  lists:member(Value, Box).
+  end;
+check_rep_cell(_,_,_,_) ->
+  false.
 
 pos(Row, Col) ->
   case Row of
@@ -289,7 +295,9 @@ map_and_reduce_row(Row) ->
       {'_', Candidates} ->
         case single(Candidates) of
           true ->
-            maps:get(true, Candidates);
+            N = lists:nth(1, maps:keys(Candidates)),
+            N;
+            %maps:get(true, Candidates);
           false ->
             {'_', Candidates}
         end
@@ -299,8 +307,46 @@ map_and_reduce_row(Row) ->
 % Return true if the cell has just one candidate number
 single(Candidates) ->
   List = maps:values(Candidates),
-  L = length([X || X <- List, X =:= true]),
+  L = length(List),
   if
-    L > 1 -> false;
+    L =/= 1 -> false;
     L == 1 -> true
+  end.
+
+% Check for the first empty cell occurrence and return its position
+search_first_empty(SudokuBoard) ->
+  search_first_empty(SudokuBoard, 1).
+
+search_first_empty(Sudoku, Row) when Row =< length(Sudoku) ->
+  case search_first_empty(Sudoku, Row, 1) of
+    {Row, Col} ->
+      {Row, Col};
+    false ->
+      search_first_empty(Sudoku, Row + 1)
+  end;
+search_first_empty(_, _) ->
+  {0, 0}.
+
+search_first_empty(Sudoku, RowNum, ColNum) when RowNum =< length(Sudoku) andalso ColNum =< length(Sudoku)->
+  Cell = lists:nth(ColNum, lists:nth(RowNum, Sudoku)),
+  case is_empty(Cell) of
+    true ->
+      {RowNum, ColNum};
+    false ->
+      search_first_empty(Sudoku, RowNum, ColNum + 1)
+  end;
+search_first_empty(_, _, _) ->
+  false.
+
+% Check whether a cell is empty or not
+is_empty(Cell) ->
+  case Cell of
+    Num when is_integer(Num) ->
+      false;
+    {'_', _} ->
+      true;
+    '_' ->
+      true;
+    _ ->
+      error({invalid_cell, Cell})
   end.

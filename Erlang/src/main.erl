@@ -9,7 +9,8 @@ start(FilePath) ->
   % Check if the problem is already solved
   case sudoku:is_solved(Problem) of
     true ->
-      Problem;
+      %io:format("~p~n", [sudoku:is_solved(Problem)]),
+      sudoku:print_sudoku(Problem);
     false ->
       % Initialize the board
       InitialSudoku = sudoku:init(Problem),
@@ -20,22 +21,27 @@ start(FilePath) ->
       % Recursive function
       {Row, Col} = sudoku_solver:search_first_empty(SudokuReduced),
 
-      Candidates = sudoku:get_candidate(SudokuReduced, Row, Col),
-
-      TrueCandidates = sudoku_solver:list_candidates(Candidates),
+      Candidates = maps:keys(sudoku:get_candidate(SudokuReduced, Row, Col)),
 
       PidS = lists:map(fun(Num) ->
         spawn_link(sudoku_solver, solve, [SudokuReduced, {Row, Col}, Num, self()])
-        end,TrueCandidates),
+        end, Candidates),
 
       receive
-        {not_valid, Pid} ->
-          exit(Pid, "Sudoku board not valid");
-        {solved, Solution} ->
+        {not_valid, Pid, _} ->
+          io:format("~p is done ~n", [Pid]),
+          exit(Pid, "Sudoku board not valid ~n");
+        {solved, Solution, SolPid} ->
           lists:foreach( fun(Pid) ->
-            exit(Pid, "Solution found")
+           exit(Pid, "Solution found")
             end,PidS),
-          sudoku:print_sudoku(Solution)
+          case sudoku:is_solved(Solution) of
+            true ->
+              io:format("solution found by ~p~n", [SolPid]),
+              sudoku:print_sudoku(Solution);
+            false ->
+              io:format("solution not found")
+          end
       end
 
   end.
