@@ -1,38 +1,29 @@
 -module(sudoku).
 
 %% API
--export([is_solved/1, is_valid/1, init/1, get_candidate/3, get_cell/3, set_cell/4, map_and_reduce/1, print_sudoku/1, search_for/4, to_box/1, set_candidate/3, search_first_empty/1]).
+-export([is_solved/1, is_valid/1, init/1, get_candidate/3, set_cell/4, map_and_reduce/1, print_sudoku/1, search_for/4, search_first_empty/1]).
 
+% -- PUBLIC --
 
-% Print a sudoku board
-print_sudoku(Sudoku) ->
-  lists:foreach(fun(Row) -> print_row(Row) end, Sudoku).
+% Checking if the sudoku board is solved
+is_solved(Sudoku) -> complete(Sudoku) and is_valid(Sudoku).
 
-print_row(Row) ->
-  lists:foreach(fun(Cell) -> print_cell(Cell) end, Row),
-  io:format("~n").
+% Check if the sudoku board is valid, i.e. if there are repetitions of numbers
+is_valid(Sudoku) -> not(repetitions(Sudoku)).
 
-print_cell(Cell) ->
+% Initialization: in every empty cell sets the candidate list
+init(Sudoku) ->
+  lists:map(fun({RowNum, Row}) ->
+    init_row(Sudoku, Row, RowNum)
+            end, lists:zip(lists:seq(1, length(Sudoku)), Sudoku)).
+
+% Get the list of candidate numbers
+get_candidate(Sudoku, RowNum, ColNum) ->
+  Row = lists:nth(RowNum, Sudoku),
+  Cell = lists:nth(ColNum, Row),
   case Cell of
-    Value when is_integer(Value) ->
-      io:format(" ~w", [Value]);
-    _ ->
-      io:format(" _")
-  end.
-
-% Get the value of a cell
-get_cell(Sudoku, Row, Col) ->
-  V = lists:nth(Row, Sudoku),
-  Cell = lists:nth(Col, V),
-  ReturnValue = get_cell(Cell),
-  {ReturnValue, Row, Col}.
-
-get_cell(Cell) ->
-  case Cell of
-    Num when is_integer(Num) ->
-      Num;
-    {'_', _} ->
-      '_';
+    {'_', Candidates} ->
+      Candidates;
     _ ->
       error({invalid_cell, Cell})
   end.
@@ -60,47 +51,57 @@ set_cell(Sudoku, RowNum, ColNum, Value) ->
       Sudoku
   end.
 
+% Find every empty cell which has only one possible candidate and
+% fill it with that number
+map_and_reduce(Sudoku) ->
+  lists:map(fun(Row) ->
+    map_and_reduce_row(Row)
+    end,Sudoku).
+
+% Print a sudoku board
+print_sudoku(Sudoku) ->
+  lists:foreach(fun(Row) -> print_row(Row) end, Sudoku).
+
+% Return true if a value is already present in the row, column and box of a given cell
+search_for(Sudoku, Row, Col, Value) ->
+  search_row(Sudoku, Row, Value) or
+    search_col(Sudoku, Col, Value) or
+    search_box(Sudoku, Row, Col, Value).
+
+% Search for the first empty cell occurrence and return its position
+search_first_empty(SudokuBoard) ->
+  search_first_empty(SudokuBoard, 1).
+
+
+% -- PRIVATE --
+
+% Print a single row
+print_row(Row) ->
+  lists:foreach(fun(Cell) -> print_cell(Cell) end, Row),
+  io:format("~n").
+
+% Print a single cell
+print_cell(Cell) ->
+  case Cell of
+    Value when is_integer(Value) ->
+      io:format(" ~w", [Value]);
+    _ ->
+      io:format(" _")
+  end.
+
+% Take a list and set the I-th element
 set_nth(1, [_|Rest], New) ->
   [New|Rest];
 set_nth(I, [E|Rest], New) ->
   [E|set_nth(I-1, Rest, New)].
 
-% Get the list of candidate numbers
-get_candidate(Sudoku, RowNum, ColNum) ->
-  Row = lists:nth(RowNum, Sudoku),
-  Cell = lists:nth(ColNum, Row),
-  case Cell of
-    {'_', Candidates} ->
-      Candidates;
-    _ ->
-      error({invalid_cell, Cell})
-  end.
-
-% Initialization: in every empty list sets the candidate list
-init(Sudoku) ->
-  %[[init_row(Sudoku, Row) || Row <- Sudoku] || _ <- lists:seq(1, length(Sudoku))].
-  lists:map(fun({RowNum, Row}) ->
-    init_row(Sudoku, Row, RowNum)
-            end, lists:zip(lists:seq(1, length(Sudoku)), Sudoku)).
-
 % Initialization of one row
 init_row(Sudoku, Row, RowNum) ->
   lists:map(fun({Col, Item}) -> transform(Sudoku, RowNum, Col, Item) end, lists:zip(lists:seq(1, length(Row)), Row)).
 
-
-predicate(Cell) ->
-  case Cell of
-    Num when is_integer(Num) ->
-      false;
-    '_' ->
-      true;
-    {'_', _} ->
-      true
-  end.
-
 % Transform each cell of the form '_' in {'_', candidates}
 transform(Sudoku, Row, Col, Cell) ->
-  case predicate(Cell) of
+  case is_empty(Cell) of
     true  -> {'_', set_candidate(Sudoku, Row, Col)};
     false -> Cell
   end.
@@ -116,12 +117,6 @@ set_candidate(Sudoku, Row, Col) ->
     V =:= true
     end,CMap).
 
-% Return true if a value is already present in the row, column and box of a given cell
-search_for(Sudoku, Row, Col, Value) ->
-  search_row(Sudoku, Row, Value) or
-    search_col(Sudoku, Col, Value) or
-    search_box(Sudoku, Row, Col, Value).
-
 % Return true if the value is already in the row
 search_row(Sudoku, RowNum, Value) ->
   Row = lists:nth(RowNum, Sudoku),
@@ -136,12 +131,6 @@ search_col(Sudoku, Col, Value) ->
 search_box(Sudoku, Row, Col, Value) ->
   Box = lists:nth(pos(Row,Col), to_box(Sudoku)),
   lists:member(Value, Box).
-
-% Checking if the sudoku board is solved
-is_solved(Sudoku) -> complete(Sudoku) and is_valid(Sudoku).
-
-% Check if the sudoku board is valid, i.e. if there are repetitions of numbers
-is_valid(Sudoku) -> not(repetitions(Sudoku)).
 
 % Check if there are no zero in the sudoku board
 complete(Sudoku) -> complete(Sudoku, 1).
@@ -184,6 +173,7 @@ box_repetitions(Sudoku, Row) ->
 to_box(Sudoku) ->
   [box(Sudoku, Row, Column) || Row <- [1, 4, 7], Column <- [1, 4, 7]].
 
+% Create a 3x3 box from a starting row and a starting column
 box(Sudoku, StartRow, StartColumn) ->
   Rows = lists:sublist(Sudoku, StartRow, 3),
   BoxRows = [lists:sublist(Row, StartColumn, 3) || Row <- Rows],
@@ -214,9 +204,11 @@ row_repetitions(Sudoku, Row) when Row =< length(Sudoku) ->
 row_repetitions(_, _) ->
   false.
 
+% Check if there are any repetitions in a row
 check_rep_row(Sudoku, Row) ->
   check_rep_row(Sudoku, Row, [0]).
 
+% Check if there are any repetitions in a row
 check_rep_row(Sudoku, Row, Seen) when Row =< length(Sudoku) ->
   case check_rep_cell(Sudoku, Row, 1, Seen) of
     true ->
@@ -249,6 +241,7 @@ check_rep_cell(Sudoku, Row, Col, Seen) when Row =< length(Sudoku) andalso Col =<
 check_rep_cell(_,_,_,_) ->
   false.
 
+% Given the row position and the column position, return the corresponding box
 pos(Row, Col) ->
   case Row of
     Num when Num =< 3 ->
@@ -280,13 +273,8 @@ pos(Row, Col) ->
       end
   end.
 
-% Find every empty cell which has only one possible candidate and
+% Find every empty cell in a row which has only one possible candidate and
 % fill it with that number
-map_and_reduce(Sudoku) ->
-  lists:map(fun(Row) ->
-    map_and_reduce_row(Row)
-    end,Sudoku).
-
 map_and_reduce_row(Row) ->
   lists:map(fun(Elem) ->
     case Elem of
@@ -297,7 +285,6 @@ map_and_reduce_row(Row) ->
           true ->
             N = lists:nth(1, maps:keys(Candidates)),
             N;
-            %maps:get(true, Candidates);
           false ->
             {'_', Candidates}
         end
@@ -313,10 +300,7 @@ single(Candidates) ->
     L == 1 -> true
   end.
 
-% Check for the first empty cell occurrence and return its position
-search_first_empty(SudokuBoard) ->
-  search_first_empty(SudokuBoard, 1).
-
+% Search for the first empty cell occurrence in a row and return its position
 search_first_empty(Sudoku, Row) when Row =< length(Sudoku) ->
   case search_first_empty(Sudoku, Row, 1) of
     {Row, Col} ->
@@ -327,6 +311,7 @@ search_first_empty(Sudoku, Row) when Row =< length(Sudoku) ->
 search_first_empty(_, _) ->
   {0, 0}.
 
+% Check cell by cell for the first empty cell occurrence and return its position
 search_first_empty(Sudoku, RowNum, ColNum) when RowNum =< length(Sudoku) andalso ColNum =< length(Sudoku)->
   Cell = lists:nth(ColNum, lists:nth(RowNum, Sudoku)),
   case is_empty(Cell) of
