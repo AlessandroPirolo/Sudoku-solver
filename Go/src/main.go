@@ -3,13 +3,19 @@ package main
 import (
 	"fmt"
 	"time"
-
+	"flag"
 	"github.com/AlessandroPirolo/Sudoku-solver/sudoku"
 )
 
 func main() {
 
-	mySudoku := sudoku.Load("../example.txt")
+	board := flag.String("path", "", "")
+	
+	flag.Parse()
+
+	path := string(*board)
+	
+	mySudoku := sudoku.Load(path)
 
 	mySudoku.Print()
 
@@ -19,7 +25,8 @@ func main() {
 
 	finished := time.Since(start)
 
+	fmt.Println("\nSolution:")
 	sudokuSolved.Print()
-	fmt.Println("Sudoku solved in", finished)
+	fmt.Println("\nSudoku solved in", finished)
 
 }
