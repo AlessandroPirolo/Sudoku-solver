@@ -126,7 +126,8 @@ The result will be like this:
  _ _ 4 2 _ _ 5 6 _
  _ _ _ _ _ _ _ _ _
  _ _ _ 1 _ _ 2 8 4
-solution found by <0.171.0>
+solution found by <0.241.0>
+time: 0.045618 seconds 
  1 3 9 4 8 2 6 7 5
  7 6 2 9 1 5 4 3 8
  4 8 5 3 7 6 9 1 2
@@ -137,6 +138,7 @@ solution found by <0.171.0>
  8 2 1 5 6 4 3 9 7
  6 5 3 1 9 7 2 8 4
 ok
+
 ~~~   
 
 

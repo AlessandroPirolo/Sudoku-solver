@@ -11,7 +11,8 @@ solve(SudokuBoard, {Row, Col}, Value, Father) ->
   % Check whether it's solved or not
   case sudoku:is_solved(IntSudoku) of
     true ->
-      Father ! {solved, IntSudoku, self()};
+      Finish = erlang:timestamp(),
+      Father ! {solved, IntSudoku, self(), Finish};
     false ->
       case sudoku:is_valid(IntSudoku) of
         false ->
@@ -30,7 +31,8 @@ continue(SudokuBoard, Father) ->
   % Check whether it's solved or not
   case sudoku:is_solved(SudokuReduced) of
     true ->
-      Father ! {solved, SudokuReduced, self()};
+      Finish = erlang:timestamp(),
+      Father ! {solved, SudokuReduced, self(), Finish};
     false ->
       case sudoku:is_valid(SudokuReduced) of
         false ->

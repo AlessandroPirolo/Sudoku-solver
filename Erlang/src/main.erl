@@ -14,6 +14,8 @@ start(FilePath) ->
       % Already solved: we print the solution
       sudoku:print_sudoku(Problem);
     false ->
+      Begin = erlang:timestamp(),
+    
       % Initialize the board
       InitialSudoku = sudoku:init(Problem),
 
@@ -31,26 +33,28 @@ start(FilePath) ->
         spawn_link(sudoku_solver, solve, [SudokuReduced, {Row, Col}, Num, self()])
         end, Candidates),
         
-      loop()
+      loop(Begin)
     
   end.
 
 
-loop() -> 
+loop(Begin) -> 
   receive
     {not_valid, Pid} ->
       % The solution isn't valid so we are stucked, then kill the process
       exit(Pid, "Sudoku board not valid ~n"),
-      loop();
-    {solved, Solution, SolPid} ->
+      loop(Begin);
+    {solved, Solution, SolPid, Finish} ->
       % Solution found
       case sudoku:is_solved(Solution) of
         true ->
           % Print the solution
           io:format("solution found by ~p~n", [SolPid]),
+          Diff = timer:now_diff(Finish, Begin) / 1000000,
+          io:format("time: ~p seconds ~n", [Diff]),
           sudoku:print_sudoku(Solution);
         false ->
-          loop()
+          loop(Begin)
       end
   end.
 	
