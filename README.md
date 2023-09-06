@@ -23,7 +23,7 @@ More precisely, the algorithm works as follow:
    - If the number is not valid, it ignores the "branch".
 4. It repeats the procedure until there are no more empty cells on the board, which means it has found the solution.
 
-This is the idea behind the algorithm. Since the procedure generates a exponential number of recursive call, what I actually did was taking some adjustment in order to make the algorithm slightly more efficient. 
+This is the idea behind the algorithm. Since the procedure generates a exponential number of recursive call, what I actually did was making some adjustment in order to make the algorithm slightly more efficient. 
 
 ### Go 
 
